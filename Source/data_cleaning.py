@@ -14,6 +14,7 @@ from data_validation import (
     VALID_LABELS,
     VALID_CATEGORIES,
     VALID_SPECIFIC_CLASSES,
+    SPOOFING_CLASSES,
 )
 
 
@@ -79,6 +80,14 @@ for file_name, df in Validated_DataFrame.items():
         ]
 
 
+    # Removes rows containing byte values that are not whole numbers.
+    for column in BYTE_COLUMNS:
+
+        cleaned_df = cleaned_df[
+            cleaned_df[column] % 1 == 0
+        ]
+
+
     # Removes rows containing unexpected labels.
     cleaned_df = cleaned_df[
         cleaned_df["label"].isin(VALID_LABELS)
@@ -96,6 +105,30 @@ for file_name, df in Validated_DataFrame.items():
         cleaned_df["specific_class"].isin(
             VALID_SPECIFIC_CLASSES
         )
+    ]
+
+
+    # Removes rows where label, category and specific_class contradict each other.
+    valid_benign = (
+        (cleaned_df["label"] == "BENIGN")
+        & (cleaned_df["category"] == "BENIGN")
+        & (cleaned_df["specific_class"] == "BENIGN")
+    )
+
+    valid_dos = (
+        (cleaned_df["label"] == "ATTACK")
+        & (cleaned_df["category"] == "DoS")
+        & (cleaned_df["specific_class"] == "DoS")
+    )
+
+    valid_spoofing = (
+        (cleaned_df["label"] == "ATTACK")
+        & (cleaned_df["category"] == "SPOOFING")
+        & (cleaned_df["specific_class"].isin(SPOOFING_CLASSES))
+    )
+
+    cleaned_df = cleaned_df[
+        valid_benign | valid_dos | valid_spoofing
     ]
 
 

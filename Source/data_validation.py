@@ -114,6 +114,14 @@ VALID_SPECIFIC_CLASSES = [
     "STEERING_WHEEL"
 ]
 
+# A reference list of the specific classes that belong to the SPOOFING category.
+SPOOFING_CLASSES = [
+    "GAS",
+    "RPM",
+    "SPEED",
+    "STEERING_WHEEL"
+]
+
 # Checks for unexpected label, category and specific_class in every file, not in the reference list.
 for file_name, df in DataFrame.items():
 
@@ -131,6 +139,69 @@ for file_name, df in DataFrame.items():
         for value in df["specific_class"].unique(): # Same 
             if value not in VALID_SPECIFIC_CLASSES: # Same 
                 print(file_name, "has unexpected specific class:", value)
+
+
+# Checks whether any byte values contain decimals instead of whole numbers.
+for file_name, df in DataFrame.items():
+
+    for column in BYTE_COLUMNS:
+
+        if column in df.columns:
+
+            if pd.api.types.is_numeric_dtype(df[column]):
+
+                fractional_values = df[
+                    df[column].notna() & (df[column] % 1 != 0)
+                ]
+
+                if len(fractional_values) > 0:
+                    print(
+                        file_name,
+                        column,
+                        "has",
+                        len(fractional_values),
+                        "values that are not whole numbers"
+                    )
+
+
+# Checks that label, category and specific_class agree with each other.
+for file_name, df in DataFrame.items():
+
+    if (
+        "label" in df.columns
+        and "category" in df.columns
+        and "specific_class" in df.columns
+    ):
+
+        valid_benign = (
+            (df["label"] == "BENIGN")
+            & (df["category"] == "BENIGN")
+            & (df["specific_class"] == "BENIGN")
+        )
+
+        valid_dos = (
+            (df["label"] == "ATTACK")
+            & (df["category"] == "DoS")
+            & (df["specific_class"] == "DoS")
+        )
+
+        valid_spoofing = (
+            (df["label"] == "ATTACK")
+            & (df["category"] == "SPOOFING")
+            & (df["specific_class"].isin(SPOOFING_CLASSES))
+        )
+
+        contradictory_rows = df[
+            ~(valid_benign | valid_dos | valid_spoofing)
+        ]
+
+        if len(contradictory_rows) > 0:
+            print(
+                file_name,
+                "has",
+                len(contradictory_rows),
+                "rows with contradictory labels"
+            )
 
 
  # Checks for repeated rows in each file.
@@ -181,6 +252,8 @@ for file_name, df in DataFrame.items():
     non_numeric_columns = []
 
     invalid_byte_values = 0
+    fractional_byte_values = 0
+    contradictory_label_rows = 0
     unexpected_labels = []
     unexpected_categories = []
     unexpected_specific_classes = []
@@ -219,6 +292,12 @@ for file_name, df in DataFrame.items():
 
                 invalid_byte_values += len(invalid_values)
 
+                fractional_values = df[
+                    df[column].notna() & (df[column] % 1 != 0)
+                ]
+
+                fractional_byte_values += len(fractional_values)
+
     # Unexpected labels.
     if "label" in df.columns:
 
@@ -243,6 +322,37 @@ for file_name, df in DataFrame.items():
             if value not in VALID_SPECIFIC_CLASSES:
                 unexpected_specific_classes.append(value)
 
+    # Checks that label, category and specific_class agree with each other.
+    if (
+        "label" in df.columns
+        and "category" in df.columns
+        and "specific_class" in df.columns
+    ):
+
+        valid_benign = (
+            (df["label"] == "BENIGN")
+            & (df["category"] == "BENIGN")
+            & (df["specific_class"] == "BENIGN")
+        )
+
+        valid_dos = (
+            (df["label"] == "ATTACK")
+            & (df["category"] == "DoS")
+            & (df["specific_class"] == "DoS")
+        )
+
+        valid_spoofing = (
+            (df["label"] == "ATTACK")
+            & (df["category"] == "SPOOFING")
+            & (df["specific_class"].isin(SPOOFING_CLASSES))
+        )
+
+        contradictory_rows = df[
+            ~(valid_benign | valid_dos | valid_spoofing)
+        ]
+
+        contradictory_label_rows = len(contradictory_rows)
+
     # Repeated rows are reported but are not automatically considered invalid.
     duplicate_count = df.duplicated().sum()
 
@@ -253,6 +363,8 @@ for file_name, df in DataFrame.items():
     print("Missing values:", missing_value_count)
     print("Non-numeric columns:", len(non_numeric_columns))
     print("Invalid byte values:", invalid_byte_values)
+    print("Fractional byte values:", fractional_byte_values)
+    print("Contradictory label rows:", contradictory_label_rows)
     print("Unexpected labels:", len(unexpected_labels))
     print("Unexpected categories:", len(unexpected_categories))
     print(
@@ -269,6 +381,8 @@ for file_name, df in DataFrame.items():
         and missing_value_count == 0
         and len(non_numeric_columns) == 0
         and invalid_byte_values == 0
+        and fractional_byte_values == 0
+        and contradictory_label_rows == 0
         and len(unexpected_labels) == 0
         and len(unexpected_categories) == 0
         and len(unexpected_specific_classes) == 0
