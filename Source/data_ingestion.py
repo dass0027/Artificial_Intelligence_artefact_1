@@ -10,7 +10,7 @@ import pandas as pd
 
 Project_Root = Path(__file__).resolve().parent.parent     # Finding Project Root Folder
 Data_Folder = Project_Root / "Data"                       # Location of Dataset
-Data_Folder.mkdir(exist_ok=True)                           # Creates Data folder if it is missing
+Data_Folder.mkdir(exist_ok = True)                        # Creates Data folder if it is missing
 
 Dataset_URL = "https://github.com/dass0027/Artificial_Intelligence_artefact_1/releases/download/dataset-v1/"
 
